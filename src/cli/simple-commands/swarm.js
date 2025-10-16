@@ -451,7 +451,7 @@ Step A: Optional MCP Coordination Setup (Single Message):
 [MCP Tools - Coordination ONLY]:
   // Set up coordination topology (OPTIONAL)
   mcp__claude-flow__swarm_init {"topology": "mesh", "maxAgents": ${maxAgents}}
-  mcp__claude-flow__agent_spawn {"type": "coordinator", "name": "SwarmLead"}
+  mcp__claude-flow__agent_spawn {"type": "task-orchestrator", "name": "SwarmLead"}
   mcp__claude-flow__memory_store {"key": "swarm/objective", "value": "${objective}"}
   mcp__claude-flow__memory_store {"key": "swarm/config", "value": {"strategy": "${strategy}"}}
 \`\`\`
@@ -460,7 +460,7 @@ Step B: REQUIRED - Claude Code Task Tool for ACTUAL Agent Execution (Single Mess
 \`\`\`javascript
 [Claude Code Task Tool - CONCURRENT Agent Spawning]:
   // Spawn ALL agents using Task tool in ONE message
-  Task("Coordinator", "Lead swarm coordination. Use hooks for memory sharing.", "coordinator")
+  Task("Coordinator", "Lead swarm coordination. Use hooks for memory sharing.", "task-orchestrator")
   Task("Researcher", "Analyze requirements and patterns. Coordinate via hooks.", "researcher")
   Task("Backend Dev", "Implement server-side features. Share progress via hooks.", "coder")
   Task("Frontend Dev", "Build UI components. Sync with backend via memory.", "coder")
@@ -673,7 +673,7 @@ ${
    A - Architecture Phase (Single BatchTool):
    \`\`\`
    [BatchTool]:
-     mcp__claude-flow__agent_spawn { type: "architect", name: "LeadArchitect" }
+     mcp__claude-flow__agent_spawn { type: "system-architect", name: "LeadArchitect" }
      mcp__claude-flow__memory_store { key: "architecture/decisions", value: {...} }
      mcp__claude-flow__task_create { name: "Backend", subtasks: [...] }
      mcp__claude-flow__task_create { name: "Frontend", subtasks: [...] }
@@ -704,7 +704,7 @@ ${
    \`\`\`
    [BatchTool]:
      mcp__claude-flow__task_create { name: "Main", subtasks: [...] }
-     mcp__claude-flow__agent_spawn { type: "coordinator" }
+     mcp__claude-flow__agent_spawn { type: "task-orchestrator" }
      mcp__claude-flow__agent_spawn { type: "coder" }
      mcp__claude-flow__agent_spawn { type: "tester" }
      mcp__claude-flow__memory_store { key: "init", value: {...} }
@@ -758,7 +758,7 @@ TESTER:
 📝 EXAMPLE MCP TOOL USAGE PATTERNS:
 
 1. Starting a swarm:
-   mcp__claude-flow__agent_spawn {"type": "coordinator", "name": "SwarmLead"}
+   mcp__claude-flow__agent_spawn {"type": "task-orchestrator", "name": "SwarmLead"}
    mcp__claude-flow__memory_store {"key": "objective", "value": "${objective}"}
    mcp__claude-flow__task_create {"name": "Main Objective", "type": "parent"}
 
@@ -2080,9 +2080,9 @@ function getAgentRecommendations(strategy, maxAgents, objective) {
 
 \`\`\`
 [BatchTool - Single Message]:
-  mcp__claude-flow__agent_spawn {"type": "coordinator", "name": "SwarmLead"}
+  mcp__claude-flow__agent_spawn {"type": "task-orchestrator", "name": "SwarmLead"}
   mcp__claude-flow__agent_spawn {"type": "researcher", "name": "RequirementsAnalyst"}
-  mcp__claude-flow__agent_spawn {"type": "architect", "name": "SystemDesigner"}
+  mcp__claude-flow__agent_spawn {"type": "system-architect", "name": "SystemDesigner"}
   mcp__claude-flow__memory_store {"key": "swarm/objective", "value": "${objective}"}
   mcp__claude-flow__task_create {"name": "Analyze Requirements", "assignTo": "RequirementsAnalyst"}
   mcp__claude-flow__task_create {"name": "Design Architecture", "assignTo": "SystemDesigner", "dependsOn": ["Analyze Requirements"]}
@@ -2100,11 +2100,11 @@ function getAgentRecommendations(strategy, maxAgents, objective) {
 
 \`\`\`
 [BatchTool - Single Message]:
-  mcp__claude-flow__agent_spawn {"type": "coordinator", "name": "ResearchLead"}
+  mcp__claude-flow__agent_spawn {"type": "task-orchestrator", "name": "ResearchLead"}
   mcp__claude-flow__agent_spawn {"type": "researcher", "name": "PrimaryInvestigator"}
-  mcp__claude-flow__agent_spawn {"type": "analyst", "name": "DataScientist"}
+  mcp__claude-flow__agent_spawn {"type": "code-analyzer", "name": "DataScientist"}
   mcp__claude-flow__agent_spawn {"type": "researcher", "name": "LiteratureExpert"}
-  mcp__claude-flow__agent_spawn {"type": "analyst", "name": "InsightsCompiler"}
+  mcp__claude-flow__agent_spawn {"type": "code-analyzer", "name": "InsightsCompiler"}
   mcp__claude-flow__memory_store {"key": "research/objective", "value": "${objective}"}
   mcp__claude-flow__task_create {"name": "Literature Review", "assignTo": "LiteratureExpert"}
   mcp__claude-flow__task_create {"name": "Primary Research", "assignTo": "PrimaryInvestigator"}

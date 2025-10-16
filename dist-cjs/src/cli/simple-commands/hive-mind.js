@@ -1963,7 +1963,7 @@ The Hive Mind MUST use Claude Code's Task tool for actual agent execution:
   Task("Researcher", "Research patterns and best practices...", "researcher")
   Task("Coder", "Implement core features...", "coder")
   Task("Tester", "Create comprehensive tests...", "tester")
-  Task("Analyst", "Analyze performance metrics...", "analyst")
+  Task("Analyst", "Analyze performance metrics...", "code-analyzer")
   TodoWrite { todos: [8-10 todos ALL in ONE call] }
 
 ❌ WRONG Pattern:

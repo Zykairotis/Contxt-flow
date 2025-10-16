@@ -1,4 +1,4 @@
-import { getAvailableAgentTypes } from '../constants/agent-types.js';
+import { getAvailableAgentTypes, resolveLegacyAgentType } from '../constants/agent-types.js';
 async function enhanceToolWithAgentTypes(tool) {
     const availableTypes = await getAvailableAgentTypes();
     const enhancedTool = JSON.parse(JSON.stringify(tool));
@@ -112,12 +112,13 @@ function createSpawnAgentTool(logger) {
             if (!context?.orchestrator) {
                 throw new Error('Orchestrator not available');
             }
+            const resolvedType = resolveLegacyAgentType(input.type);
             const profile = {
                 id: `agent_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                 name: input.name,
-                type: input.type,
+                type: resolvedType,
                 capabilities: input.capabilities || [],
-                systemPrompt: input.systemPrompt || getDefaultSystemPrompt(input.type),
+                systemPrompt: input.systemPrompt || getDefaultSystemPrompt(resolvedType),
                 maxConcurrentTasks: input.maxConcurrentTasks || 3,
                 priority: input.priority || 5,
                 environment: input.environment,
@@ -128,6 +129,8 @@ function createSpawnAgentTool(logger) {
                 agentId: profile.id,
                 sessionId,
                 profile,
+                originalType: input.type,
+                resolvedType,
                 status: 'spawned',
                 timestamp: new Date().toISOString()
             };
@@ -1404,13 +1407,17 @@ function createSpawnParallelAgentsTool(logger) {
             if (!executor) {
                 throw new Error('ParallelSwarmExecutor not initialized');
             }
-            const agentConfigs = input.agents.map((agent)=>({
+            const agentConfigs = input.agents.map((agent)=>{
+                const resolvedType = resolveLegacyAgentType(agent.type);
+                return {
                     agentId: `agent_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                    agentType: agent.type,
+                    agentType: resolvedType,
+                    originalType: agent.type,
                     task: `Spawn ${agent.name} agent`,
                     capabilities: agent.capabilities || [],
                     priority: agent.priority || 'medium'
-                }));
+                };
+            });
             const startTime = Date.now();
             const sessions = await executor.spawnParallelAgents(agentConfigs, {
                 maxConcurrency: input.maxConcurrency || 5,

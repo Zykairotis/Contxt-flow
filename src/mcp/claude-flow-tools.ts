@@ -4,7 +4,7 @@
 
 import type { MCPTool, MCPContext, AgentProfile, Task, MemoryEntry } from '../utils/types.js';
 import type { ILogger } from '../core/logger.js';
-import { getAvailableAgentTypes, getAgentTypeSchema } from '../constants/agent-types.js';
+import { getAvailableAgentTypes, getAgentTypeSchema, resolveLegacyAgentType } from '../constants/agent-types.js';
 import type { Permissions } from './auth.js';
 
 export interface ClaudeFlowToolContext extends MCPContext {
@@ -154,12 +154,15 @@ function createSpawnAgentTool(logger: ILogger): MCPTool {
         throw new Error('Orchestrator not available');
       }
 
+      // Resolve legacy agent types to modern equivalents
+      const resolvedType = resolveLegacyAgentType(input.type);
+
       const profile: AgentProfile = {
         id: `agent_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         name: input.name,
-        type: input.type,
+        type: resolvedType,
         capabilities: input.capabilities || [],
-        systemPrompt: input.systemPrompt || getDefaultSystemPrompt(input.type),
+        systemPrompt: input.systemPrompt || getDefaultSystemPrompt(resolvedType),
         maxConcurrentTasks: input.maxConcurrentTasks || 3,
         priority: input.priority || 5,
         environment: input.environment,
@@ -172,6 +175,8 @@ function createSpawnAgentTool(logger: ILogger): MCPTool {
         agentId: profile.id,
         sessionId,
         profile,
+        originalType: input.type,
+        resolvedType,
         status: 'spawned',
         timestamp: new Date().toISOString(),
       };
@@ -1369,13 +1374,19 @@ function createSpawnParallelAgentsTool(logger: ILogger): MCPTool {
       }
 
       // Convert input agents to ParallelAgentConfig format
-      const agentConfigs = input.agents.map((agent: any) => ({
-        agentId: `agent_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        agentType: agent.type,
-        task: `Spawn ${agent.name} agent`,
-        capabilities: agent.capabilities || [],
-        priority: agent.priority || 'medium',
-      }));
+      const agentConfigs = input.agents.map((agent: any) => {
+        // Resolve legacy agent types to modern equivalents
+        const resolvedType = resolveLegacyAgentType(agent.type);
+
+        return {
+          agentId: `agent_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          agentType: resolvedType,
+          originalType: agent.type,
+          task: `Spawn ${agent.name} agent`,
+          capabilities: agent.capabilities || [],
+          priority: agent.priority || 'medium',
+        };
+      });
 
       const startTime = Date.now();
       const sessions = await executor.spawnParallelAgents(agentConfigs, {
