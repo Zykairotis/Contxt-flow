@@ -366,17 +366,35 @@ async function spawnSwarmWizard() {
     {
       type: 'checkbox',
       name: 'workerTypes',
-      message: 'Select worker agent types:',
+      message: 'Select worker agent types (space to select, enter to confirm):',
       choices: [
-        { name: 'Researcher', value: 'researcher', checked: true },
-        { name: 'Coder', value: 'coder', checked: true },
-        { name: 'Analyst', value: 'analyst', checked: true },
-        { name: 'Tester', value: 'tester', checked: true },
-        { name: 'Architect', value: 'architect' },
-        { name: 'Reviewer', value: 'reviewer' },
-        { name: 'Optimizer', value: 'optimizer' },
-        { name: 'Documenter', value: 'documenter' },
+        new inquirer.Separator('═══ Core Development ═══'),
+        { name: '📋 Planner - Task breakdown & coordination', value: 'planner', checked: true },
+        { name: '👨‍💻 Coder - Implementation & coding', value: 'coder', checked: true },
+        { name: '🔬 Researcher - Information gathering', value: 'researcher', checked: true },
+        { name: '✅ Tester - Testing & QA', value: 'tester', checked: true },
+        { name: '👀 Reviewer - Code review', value: 'reviewer' },
+        
+        new inquirer.Separator('═══ Analysis & Architecture ═══'),
+        { name: '🔍 Code Analyzer - Code quality analysis', value: 'code-analyzer' },
+        { name: '🏗️  System Architect - Architecture design', value: 'system-architect' },
+        { name: '⚡ Performance Analyzer - Optimization', value: 'perf-analyzer' },
+        
+        new inquirer.Separator('═══ Specialized Development ═══'),
+        { name: '🔌 Backend Developer - API & backend', value: 'backend-dev' },
+        { name: '🤖 ML Developer - Machine learning', value: 'ml-developer' },
+        { name: '📱 Mobile Developer - Mobile apps', value: 'mobile-dev' },
+        
+        new inquirer.Separator('═══ DevOps & Documentation ═══'),
+        { name: '🚀 CI/CD Engineer - Pipeline automation', value: 'cicd-engineer' },
+        { name: '📚 API Docs - Documentation', value: 'api-docs' },
+        
+        new inquirer.Separator('═══ Coordination (Advanced) ═══'),
+        { name: '🎯 Task Orchestrator - Multi-agent coordination', value: 'task-orchestrator' },
+        { name: '🌐 Mesh Coordinator - Distributed coordination', value: 'mesh-coordinator' },
       ],
+      pageSize: 20,
+      loop: false,
     },
     {
       type: 'list',
@@ -899,14 +917,30 @@ async function spawnSwarm(args, flags) {
  */
 function getAgentCapabilities(type) {
   const capabilities = {
+    // Core Development
+    planner: ['task-decomposition', 'dependency-analysis', 'resource-allocation', 'timeline-estimation'],
     researcher: ['web-search', 'data-gathering', 'analysis', 'synthesis'],
     coder: ['code-generation', 'implementation', 'refactoring', 'debugging'],
-    analyst: ['data-analysis', 'pattern-recognition', 'reporting', 'visualization'],
     tester: ['test-generation', 'quality-assurance', 'bug-detection', 'validation'],
-    architect: ['system-design', 'architecture', 'planning', 'documentation'],
     reviewer: ['code-review', 'quality-check', 'feedback', 'improvement'],
-    optimizer: ['performance-tuning', 'optimization', 'profiling', 'enhancement'],
-    documenter: ['documentation', 'explanation', 'tutorial-creation', 'knowledge-base'],
+    
+    // Analysis & Architecture
+    'code-analyzer': ['code-analysis', 'quality-check', 'pattern-recognition', 'metrics'],
+    'system-architect': ['system-design', 'architecture', 'planning', 'documentation'],
+    'perf-analyzer': ['performance-tuning', 'optimization', 'profiling', 'enhancement'],
+    
+    // Specialized Development
+    'backend-dev': ['api-design', 'rest-endpoints', 'graphql', 'database-integration'],
+    'ml-developer': ['model-training', 'data-preprocessing', 'ml-pipeline', 'model-optimization'],
+    'mobile-dev': ['mobile-ui', 'native-apis', 'cross-platform', 'app-deployment'],
+    
+    // DevOps & Documentation
+    'cicd-engineer': ['pipeline-automation', 'deployment', 'testing-automation', 'infrastructure'],
+    'api-docs': ['documentation', 'explanation', 'tutorial-creation', 'knowledge-base'],
+    
+    // Coordination
+    'task-orchestrator': ['multi-agent-coordination', 'task-routing', 'load-balancing', 'progress-tracking'],
+    'mesh-coordinator': ['distributed-coordination', 'peer-to-peer', 'consensus', 'fault-tolerance'],
   };
 
   return capabilities[type] || ['general'];
@@ -2551,7 +2585,7 @@ function getWorkerTypeInstructions(workerType) {
 - Optimize resource allocation
 - Ensure alignment with objectives`,
 
-    architect: `- Design system architecture and components
+    'system-architect': `- Design system architecture and components
 - Define technical standards and patterns
 - Create implementation guidelines
 - Review and approve design decisions

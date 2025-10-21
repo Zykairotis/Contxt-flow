@@ -323,7 +323,7 @@ export class QueenCoordinator extends EventEmitter {
         'Create user documentation',
         'Prepare deployment guide',
       ],
-      workers: workers.filter((w) => ['optimizer', 'documenter'].includes(w.type)),
+      workers: workers.filter((w) => ['perf-analyzer', 'api-docs'].includes(w.type)),
       parallel: true,
     });
 
@@ -581,10 +581,10 @@ export class QueenCoordinator extends EventEmitter {
       return 'tester';
     }
     if (taskLower.includes('optimize') || taskLower.includes('performance')) {
-      return 'optimizer';
+      return 'perf-analyzer';
     }
     if (taskLower.includes('document') || taskLower.includes('write')) {
-      return 'documenter';
+      return 'api-docs';
     }
 
     return 'coder'; // Default

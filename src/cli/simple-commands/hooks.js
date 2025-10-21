@@ -45,6 +45,9 @@ export async function hooksAction(subArgs, flags) {
       case 'pre-command': // Support both names for compatibility
         await preBashCommand(subArgs, flags);
         break;
+      case 'pre-search':
+        await preSearchCommand(subArgs, flags);
+        break;
 
       // Post-Operation Hooks
       case 'post-task':
@@ -425,6 +428,129 @@ async function preBashCommand(subArgs, flags) {
     printSuccess(`✅ Pre-bash hook completed`);
   } catch (err) {
     printError(`Pre-bash hook failed: ${err.message}`);
+  }
+}
+
+async function preSearchCommand(subArgs, flags) {
+  const options = flags;
+  const query = options.query || subArgs.slice(1).join(' ');
+  const searchType = options.type || 'general';
+  const cacheResults = options['cache-results'] === true || options['cache-results'] === 'true' || false;
+  const optimizeQuery = options['optimize-query'] === true || options['optimize-query'] === 'true' || false;
+
+  console.log(`🔍 Executing pre-search hook...`);
+  console.log(`🔎 Query: ${query}`);
+  console.log(`📊 Type: ${searchType}`);
+  if (cacheResults) console.log(`💾 Caching: ENABLED`);
+  if (optimizeQuery) console.log(`⚡ Query optimization: ENABLED`);
+
+  try {
+    const store = await getMemoryStore();
+
+    // Check if search was recently cached
+    let cacheResult = null;
+    if (cacheResults) {
+      const cached = await store.retrieve(`search-cache:${query}`, {
+        namespace: 'search-cache',
+      });
+
+      if (cached) {
+        const cacheAge = Date.now() - new Date(cached.cachedAt).getTime();
+        const cacheValid = cacheAge < 3600000; // 1 hour
+
+        if (cacheValid) {
+          console.log(`  💾 Using cached results (${Math.round(cacheAge / 1000)}s old)`);
+          cacheResult = {
+            cached: true,
+            resultCount: cached.resultCount,
+            cachedAt: cached.cachedAt,
+            cacheAge: Math.round(cacheAge / 1000),
+          };
+        }
+      }
+    }
+
+    // Optimize query if requested
+    let optimizedQuery = query;
+    let optimizationNotes = [];
+    if (optimizeQuery && !cacheResult?.cached) {
+      // Basic query optimization
+      if (query.length > 100) {
+        // Truncate very long queries
+        optimizedQuery = query.substring(0, 100) + '...';
+        optimizationNotes.push('Truncated long query');
+      }
+
+      // Add common search operators
+      if (!query.includes('"') && query.split(' ').length === 2) {
+        // For 2-word queries, add quotes for exact phrase
+        optimizedQuery = `"${query}"`;
+        optimizationNotes.push('Added phrase matching');
+      }
+
+      // Suggest file extensions for code searches
+      if (/code|function|class|method/i.test(query) && !/\.(js|ts|py|java|cpp|c)/i.test(query)) {
+        optimizationNotes.push('Consider adding file extensions: .js, .ts, .py');
+      }
+
+      if (optimizationNotes.length > 0) {
+        console.log(`  ⚡ Query optimized: ${optimizationNotes.join(', ')}`);
+      }
+    }
+
+    const searchData = {
+      originalQuery: query,
+      optimizedQuery,
+      searchType,
+      timestamp: new Date().toISOString(),
+      searchId: generateId('search'),
+      cacheResults,
+      optimizeQuery,
+      cacheResult,
+      optimizationNotes,
+    };
+
+    await store.store(`search:${searchData.searchId}:pre`, searchData, {
+      namespace: 'hooks:pre-search',
+      metadata: { hookType: 'pre-search', query, searchType },
+    });
+
+    // Track search patterns
+    await store.store(
+      `search-pattern:${Date.now()}`,
+      {
+        query,
+        searchType,
+        optimized: optimizedQuery !== query,
+        cached: !!cacheResult?.cached,
+        timestamp: new Date().toISOString(),
+      },
+      { namespace: 'search-patterns' },
+    );
+
+    // Update search history
+    await store.store(
+      `search-history:${Date.now()}`,
+      {
+        query,
+        searchType,
+        preProcessed: true,
+        timestamp: new Date().toISOString(),
+      },
+      { namespace: 'search-history' },
+    );
+
+    console.log(`  💾 Search pre-processing saved to .swarm/memory.db`);
+
+    if (cacheResult?.cached) {
+      console.log(`  🚀 Using cached results (${cacheResult.resultCount} results)`);
+    } else if (optimizeQuery && optimizedQuery !== query) {
+      console.log(`  💡 Optimized query: ${optimizedQuery}`);
+    }
+
+    printSuccess(`✅ Pre-search hook completed`);
+  } catch (err) {
+    printError(`Pre-search hook failed: ${err.message}`);
   }
 }
 
@@ -1465,6 +1591,9 @@ function showHooksHelp() {
   console.log('  post-command    Same as post-bash');
   console.log('                  --track-metrics       Track performance metrics');
   console.log('                  --store-results       Store detailed results');
+  console.log('  pre-search      Prepare search queries and check cache');
+  console.log('                  --cache-results      Enable search result caching');
+  console.log('                  --optimize-query     Optimize search queries');
   console.log('  post-search     Cache search results');
 
   console.log('\nMCP Integration Hooks:');
@@ -1501,6 +1630,7 @@ function showHooksHelp() {
   console.log('\nExamples:');
   console.log('  hooks pre-command --command "npm test" --validate-safety true');
   console.log('  hooks pre-edit --file "src/app.js" --auto-assign-agents true');
+  console.log('  hooks pre-search --query "code quality metrics" --cache-results true --optimize-query true');
   console.log('  hooks post-command --command "build" --track-metrics true');
   console.log('  hooks post-edit --file "src/app.js" --format true --train-neural true');
   console.log('  hooks session-end --generate-summary true --export-metrics true');

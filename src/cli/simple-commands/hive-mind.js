@@ -9,6 +9,8 @@ import { writeFile, readFile } from 'fs/promises';
 import path from 'path';
 import readline from 'readline';
 import inquirer from 'inquirer';
+import enquirerPkg from 'enquirer';
+const { Select } = enquirerPkg;
 import chalk from 'chalk';
 import ora from 'ora';
 import { args, cwd, exit, writeTextFile, readTextFile, mkdirAsync } from '../node-compat.js';
@@ -330,6 +332,602 @@ const hiveMindWizard = safeInteractive(
 );
 
 /**
+ * Define all available agents organized by categories for tree view
+ */
+const AGENT_TREE = [
+  {
+    name: 'core-development',
+    title: 'Core Development',
+    preview: 'planner, coder, researcher, tester...',
+    agents: [
+      { value: 'planner', name: 'Planner - Task breakdown and coordination', enabled: true },
+      { value: 'coder', name: 'Coder - Implementation and coding', enabled: true },
+      { value: 'researcher', name: 'Researcher - Information gathering and research', enabled: true },
+      { value: 'tester', name: 'Tester - Testing and quality assurance', enabled: true },
+      { value: 'reviewer', name: 'Reviewer - Code review and feedback' },
+    ]
+  },
+  {
+    name: 'analysis-architecture',
+    title: 'Analysis & Architecture',
+    preview: 'code-analyzer, system-architect, perf-analyzer...',
+    agents: [
+      { value: 'code-analyzer', name: 'Code Analyzer - Code quality analysis and metrics' },
+      { value: 'system-architect', name: 'System Architect - System architecture design' },
+      { value: 'repo-architect', name: 'Repository Architect - Repository structure planning' },
+      { value: 'perf-analyzer', name: 'Performance Analyzer - Performance optimization' },
+    ]
+  },
+  {
+    name: 'specialized-development',
+    title: 'Specialized Development',
+    preview: 'backend-dev, ml-developer, mobile-dev...',
+    agents: [
+      { value: 'backend-dev', name: 'Backend Developer - API and backend development' },
+      { value: 'ml-developer', name: 'ML Developer - Machine learning development' },
+      { value: 'mobile-dev', name: 'Mobile Developer - Mobile app development' },
+    ]
+  },
+  {
+    name: 'coordination',
+    title: 'Coordination & Orchestration',
+    preview: 'task-orchestrator, adaptive-coordinator, mesh-coordinator...',
+    agents: [
+      { value: 'task-orchestrator', name: 'Task Orchestrator - Multi-agent task coordination' },
+      { value: 'adaptive-coordinator', name: 'Adaptive Coordinator - Adaptive coordination strategy' },
+      { value: 'hierarchical-coordinator', name: 'Hierarchical Coordinator - Hierarchical swarm coordination' },
+      { value: 'mesh-coordinator', name: 'Mesh Coordinator - Mesh network coordination' },
+      { value: 'sparc-coord', name: 'SPARC Coordinator - SPARC methodology coordination' },
+      { value: 'sync-coordinator', name: 'Sync Coordinator - Synchronization coordination' },
+      { value: 'memory-coordinator', name: 'Memory Coordinator - Memory management' },
+      { value: 'swarm-init', name: 'Swarm Init - Swarm initialization' },
+      { value: 'smart-agent', name: 'Smart Agent - Smart automation' },
+    ]
+  },
+  {
+    name: 'consensus-sync',
+    title: 'Consensus & Synchronization',
+    preview: 'byzantine-coordinator, crdt-synchronizer, raft-manager...',
+    agents: [
+      { value: 'byzantine-coordinator', name: 'Byzantine Coordinator - Byzantine fault tolerance' },
+      { value: 'crdt-synchronizer', name: 'CRDT Synchronizer - CRDT synchronization' },
+      { value: 'gossip-coordinator', name: 'Gossip Coordinator - Gossip protocol coordination' },
+      { value: 'quorum-manager', name: 'Quorum Manager - Quorum management' },
+      { value: 'raft-manager', name: 'Raft Manager - Raft consensus algorithm' },
+      { value: 'security-manager', name: 'Security Manager - Security management' },
+    ]
+  },
+  {
+    name: 'performance-monitoring',
+    title: 'Performance & Monitoring',
+    preview: 'performance-benchmarker...',
+    agents: [
+      { value: 'performance-benchmarker', name: 'Performance Benchmarker - Performance benchmarking' },
+    ]
+  },
+  {
+    name: 'github-integration',
+    title: 'GitHub Integration',
+    preview: 'pr-manager, issue-tracker, release-manager...',
+    agents: [
+      { value: 'github-modes', name: 'GitHub Modes - GitHub operational modes' },
+      { value: 'pr-manager', name: 'PR Manager - Pull request management' },
+      { value: 'issue-tracker', name: 'Issue Tracker - Issue tracking' },
+      { value: 'project-board-sync', name: 'Project Board Sync - Project board synchronization' },
+      { value: 'release-manager', name: 'Release Manager - Release management' },
+      { value: 'release-swarm', name: 'Release Swarm - Release swarm operations' },
+      { value: 'code-review-swarm', name: 'Code Review Swarm - Code review swarm' },
+      { value: 'multi-repo-swarm', name: 'Multi-Repo Swarm - Multi-repository operations' },
+      { value: 'swarm-pr', name: 'Swarm PR - PR swarm operations' },
+      { value: 'swarm-issue', name: 'Swarm Issue - Issue tracking swarm' },
+      { value: 'workflow-automation', name: 'Workflow Automation - Workflow automation' },
+    ]
+  },
+  {
+    name: 'devops-cicd',
+    title: 'DevOps & CI/CD',
+    preview: 'cicd-engineer, production-validator, migration-planner...',
+    agents: [
+      { value: 'cicd-engineer', name: 'CI/CD Engineer - CI/CD automation' },
+      { value: 'production-validator', name: 'Production Validator - Production validation' },
+      { value: 'migration-planner', name: 'Migration Planner - Migration planning' },
+    ]
+  },
+  {
+    name: 'documentation',
+    title: 'Documentation',
+    preview: 'api-docs',
+    agents: [
+      { value: 'api-docs', name: 'API Docs - API documentation' },
+    ]
+  },
+  {
+    name: 'sparc-methodology',
+    title: 'SPARC Methodology',
+    preview: 'sparc-coder, specification, pseudocode...',
+    agents: [
+      { value: 'sparc-coder', name: 'SPARC Coder - SPARC implementation' },
+      { value: 'specification', name: 'Specification - Specification writing' },
+      { value: 'pseudocode', name: 'Pseudocode - Pseudocode generation' },
+      { value: 'refinement', name: 'Refinement - Code refinement' },
+      { value: 'architecture', name: 'Architecture - Architecture phase' },
+    ]
+  },
+  {
+    name: 'swarm-management',
+    title: 'Swarm Management',
+    preview: 'tdd-london-swarm',
+    agents: [
+      { value: 'tdd-london-swarm', name: 'TDD London Swarm - TDD London-style swarm' },
+    ]
+  },
+  {
+    name: 'neural-ai',
+    title: 'Neural & AI',
+    preview: 'flow-nexus-neural',
+    agents: [
+      { value: 'flow-nexus-neural', name: 'Flow-Nexus Neural - Flow-Nexus neural operations' },
+    ]
+  },
+  {
+    name: 'flow-nexus',
+    title: 'Flow-Nexus Platform',
+    preview: 'app-store, auth, challenges, payments...',
+    agents: [
+      { value: 'flow-nexus-app-store', name: 'App Store - App store management' },
+      { value: 'flow-nexus-auth', name: 'Authentication - Authentication handling' },
+      { value: 'flow-nexus-challenges', name: 'Challenges - Challenge management' },
+      { value: 'flow-nexus-payments', name: 'Payments - Payment processing' },
+      { value: 'flow-nexus-sandbox', name: 'Sandbox - Sandbox environment' },
+      { value: 'flow-nexus-swarm', name: 'Swarm - Swarm operations' },
+      { value: 'flow-nexus-user-tools', name: 'User Tools - User tool management' },
+      { value: 'flow-nexus-workflow', name: 'Workflow - Workflow management' },
+    ]
+  },
+  {
+    name: 'templates-utilities',
+    title: 'Templates & Utilities',
+    preview: 'base-template-generator',
+    agents: [
+      { value: 'base-template-generator', name: 'Base Template Generator - Template generation' },
+    ]
+  },
+];
+
+/**
+ * Legacy AGENT_CATALOG for backward compatibility
+ */
+const AGENT_CATALOG = {
+  'core-development': {
+    name: 'Core Development',
+    description: 'Essential development agents for coding, testing, and planning',
+    agents: [
+      { name: 'Planner', value: 'planner', description: 'Task breakdown and coordination', default: true },
+      { name: 'Coder', value: 'coder', description: 'Implementation and coding', default: true },
+      { name: 'Researcher', value: 'researcher', description: 'Information gathering and research', default: true },
+      { name: 'Tester', value: 'tester', description: 'Testing and quality assurance', default: true },
+      { name: 'Reviewer', value: 'reviewer', description: 'Code review and feedback' },
+    ]
+  },
+  'analysis-architecture': {
+    name: 'Analysis & Architecture',
+    description: 'Code analysis, architecture design, and performance optimization',
+    agents: [
+      { name: 'Code Analyzer', value: 'code-analyzer', description: 'Code quality analysis and metrics' },
+      { name: 'Analyze Code Quality', value: 'analyze-code-quality', description: 'Deep code quality analysis' },
+      { name: 'System Architect', value: 'system-architect', description: 'System architecture design' },
+      { name: 'Architecture System Design', value: 'arch-system-design', description: 'Detailed architecture design' },
+      { name: 'Repository Architect', value: 'repo-architect', description: 'Repository structure planning' },
+      { name: 'Performance Analyzer', value: 'perf-analyzer', description: 'Performance optimization' },
+    ]
+  },
+  'specialized-development': {
+    name: 'Specialized Development',
+    description: 'Domain-specific development specialists',
+    agents: [
+      { name: 'Backend Developer', value: 'backend-dev', description: 'API and backend development' },
+      { name: 'ML Developer', value: 'ml-developer', description: 'Machine learning development' },
+      { name: 'Mobile Developer', value: 'mobile-dev', description: 'Mobile app development' },
+      { name: 'Data ML Model', value: 'data-ml-model', description: 'ML model development' },
+    ]
+  },
+  'coordination': {
+    name: 'Coordination & Orchestration',
+    description: 'Multi-agent coordination and task orchestration',
+    agents: [
+      { name: 'Task Orchestrator', value: 'task-orchestrator', description: 'Multi-agent task coordination' },
+      { name: 'Adaptive Coordinator', value: 'adaptive-coordinator', description: 'Adaptive coordination strategy' },
+      { name: 'Hierarchical Coordinator', value: 'hierarchical-coordinator', description: 'Hierarchical swarm coordination' },
+      { name: 'Mesh Coordinator', value: 'mesh-coordinator', description: 'Mesh network coordination' },
+      { name: 'Queen Coordinator', value: 'queen-coordinator', description: 'Queen-led coordination' },
+      { name: 'SPARC Coordinator', value: 'sparc-coord', description: 'SPARC methodology coordination' },
+      { name: 'Sync Coordinator', value: 'sync-coordinator', description: 'Synchronization coordination' },
+      { name: 'Collective Intelligence Coordinator', value: 'collective-intelligence-coordinator', description: 'CI coordination' },
+      { name: 'Memory Coordinator', value: 'memory-coordinator', description: 'Memory management' },
+      { name: 'Swarm Init', value: 'swarm-init', description: 'Swarm initialization' },
+      { name: 'Smart Agent', value: 'smart-agent', description: 'Smart automation' },
+    ]
+  },
+  'consensus-sync': {
+    name: 'Consensus & Synchronization',
+    description: 'Distributed consensus and synchronization protocols',
+    agents: [
+      { name: 'Byzantine Coordinator', value: 'byzantine-coordinator', description: 'Byzantine fault tolerance' },
+      { name: 'CRDT Synchronizer', value: 'crdt-synchronizer', description: 'CRDT synchronization' },
+      { name: 'Gossip Coordinator', value: 'gossip-coordinator', description: 'Gossip protocol coordination' },
+      { name: 'Quorum Manager', value: 'quorum-manager', description: 'Quorum management' },
+      { name: 'Raft Manager', value: 'raft-manager', description: 'Raft consensus algorithm' },
+      { name: 'Security Manager', value: 'security-manager', description: 'Security management' },
+      { name: 'Consensus Builder', value: 'consensus-builder', description: 'Consensus building' },
+    ]
+  },
+  'performance-monitoring': {
+    name: 'Performance & Monitoring',
+    description: 'Performance analysis, monitoring, and optimization',
+    agents: [
+      { name: 'Performance Benchmarker', value: 'performance-benchmarker', description: 'Performance benchmarking' },
+      { name: 'Performance Monitor', value: 'performance-monitor', description: 'Real-time monitoring' },
+      { name: 'Resource Allocator', value: 'resource-allocator', description: 'Resource allocation' },
+      { name: 'Topology Optimizer', value: 'topology-optimizer', description: 'Topology optimization' },
+      { name: 'Load Balancer', value: 'load-balancer', description: 'Load balancing' },
+      { name: 'Benchmark Suite', value: 'benchmark-suite', description: 'Benchmark execution' },
+    ]
+  },
+  'github-integration': {
+    name: 'GitHub Integration',
+    description: 'GitHub operations, PRs, issues, and releases',
+    agents: [
+      { name: 'GitHub Modes', value: 'github-modes', description: 'GitHub operational modes' },
+      { name: 'PR Manager', value: 'pr-manager', description: 'Pull request management' },
+      { name: 'Issue Tracker', value: 'issue-tracker', description: 'Issue tracking' },
+      { name: 'Project Board Sync', value: 'project-board-sync', description: 'Project board synchronization' },
+      { name: 'Release Manager', value: 'release-manager', description: 'Release management' },
+      { name: 'Release Swarm', value: 'release-swarm', description: 'Release swarm operations' },
+      { name: 'Code Review Swarm', value: 'code-review-swarm', description: 'Code review swarm' },
+      { name: 'Multi-Repo Swarm', value: 'multi-repo-swarm', description: 'Multi-repository operations' },
+      { name: 'Swarm PR', value: 'swarm-pr', description: 'PR swarm operations' },
+      { name: 'Swarm Issue', value: 'swarm-issue', description: 'Issue tracking swarm' },
+      { name: 'Workflow Automation', value: 'workflow-automation', description: 'Workflow automation' },
+    ]
+  },
+  'devops-cicd': {
+    name: 'DevOps & CI/CD',
+    description: 'DevOps, CI/CD, deployment, and operations',
+    agents: [
+      { name: 'CI/CD Engineer', value: 'cicd-engineer', description: 'CI/CD automation' },
+      { name: 'CI/CD GitHub Operations', value: 'ops-cicd-github', description: 'GitHub CI/CD operations' },
+      { name: 'Production Validator', value: 'production-validator', description: 'Production validation' },
+      { name: 'Migration Planner', value: 'migration-planner', description: 'Migration planning' },
+    ]
+  },
+  'documentation': {
+    name: 'Documentation',
+    description: 'API documentation and technical writing',
+    agents: [
+      { name: 'API Docs', value: 'api-docs', description: 'API documentation' },
+      { name: 'API OpenAPI Docs', value: 'docs-api-openapi', description: 'OpenAPI documentation' },
+    ]
+  },
+  'sparc-methodology': {
+    name: 'SPARC Methodology',
+    description: 'SPARC development methodology agents',
+    agents: [
+      { name: 'SPARC Coder', value: 'sparc-coder', description: 'SPARC implementation' },
+      { name: 'SPARC Implementer', value: 'implementer-sparc-coder', description: 'SPARC coder implementation' },
+      { name: 'Specification', value: 'specification', description: 'Specification writing' },
+      { name: 'Pseudocode', value: 'pseudocode', description: 'Pseudocode generation' },
+      { name: 'Refinement', value: 'refinement', description: 'Code refinement' },
+    ]
+  },
+  'goal-planning': {
+    name: 'Goal Planning',
+    description: 'Goal-oriented planning and execution',
+    agents: [
+      { name: 'Goal Planner', value: 'goal-planner', description: 'General goal planning' },
+      { name: 'Code Goal Planner', value: 'code-goal-planner', description: 'Goal-oriented coding' },
+      { name: 'Sublinear Goal Planner', value: 'sublinear-goal-planner', description: 'Sublinear goal planning' },
+    ]
+  },
+  'swarm-management': {
+    name: 'Swarm Management',
+    description: 'Swarm-specific management and coordination',
+    agents: [
+      { name: 'Swarm Memory Manager', value: 'swarm-memory-manager', description: 'Swarm memory management' },
+      { name: 'Scout Explorer', value: 'scout-explorer', description: 'Exploration and discovery' },
+      { name: 'Worker Specialist', value: 'worker-specialist', description: 'Worker specialization' },
+      { name: 'TDD London Swarm', value: 'tdd-london-swarm', description: 'TDD London-style swarm' },
+    ]
+  },
+  'neural-ai': {
+    name: 'Neural & AI',
+    description: 'Neural networks and AI operations',
+    agents: [
+      { name: 'SAFLA Neural', value: 'safla-neural', description: 'Neural network agent' },
+      { name: 'Flow-Nexus Neural', value: 'flow-nexus-neural', description: 'Flow-Nexus neural operations' },
+    ]
+  },
+  'flow-nexus': {
+    name: 'Flow-Nexus Platform',
+    description: 'Flow-Nexus platform integration features',
+    agents: [
+      { name: 'App Store', value: 'flow-nexus-app-store', description: 'App store management' },
+      { name: 'Authentication', value: 'flow-nexus-auth', description: 'Authentication handling' },
+      { name: 'Challenges', value: 'flow-nexus-challenges', description: 'Challenge management' },
+      { name: 'Payments', value: 'flow-nexus-payments', description: 'Payment processing' },
+      { name: 'Sandbox', value: 'flow-nexus-sandbox', description: 'Sandbox environment' },
+      { name: 'Swarm', value: 'flow-nexus-swarm', description: 'Swarm operations' },
+      { name: 'User Tools', value: 'flow-nexus-user-tools', description: 'User tool management' },
+      { name: 'Workflow', value: 'flow-nexus-workflow', description: 'Workflow management' },
+    ]
+  },
+  'templates-utilities': {
+    name: 'Templates & Utilities',
+    description: 'Template generation and utility agents',
+    agents: [
+      { name: 'Base Template Generator', value: 'base-template-generator', description: 'Template generation' },
+      { name: 'Mobile React Native Spec', value: 'spec-mobile-react-native', description: 'React Native specs' },
+    ]
+  },
+};
+
+/**
+ * Build choices for tree view based on expanded state
+ */
+function buildTreeChoices(expandedCategories, selectedAgents) {
+  const choices = [];
+  
+  AGENT_TREE.forEach(category => {
+    if (expandedCategories.has(category.name)) {
+      // Show expanded category with agents
+      choices.push({
+        name: chalk.yellow(`▼ ${category.title}`) + chalk.gray(' [← to collapse]'),
+        value: `collapse:${category.name}`,
+        isCategory: true,
+        categoryName: category.name,
+      });
+      
+      // Show agents in this category
+      category.agents.forEach(agent => {
+        const isSelected = selectedAgents.has(agent.value);
+        const checkbox = isSelected ? chalk.green('☑') : '☐';
+        choices.push({
+          name: `  ${checkbox} ${agent.name}`,
+          value: `toggle:${agent.value}`,
+          isAgent: true,
+        });
+      });
+      
+      choices.push(new inquirer.Separator());
+    } else {
+      // Show collapsed category with preview
+      choices.push({
+        name: chalk.cyan(`► ${category.title}`) + chalk.gray(` - ${category.preview}`) + chalk.gray(' [→ to expand]'),
+        value: `expand:${category.name}`,
+        isCategory: true,
+        categoryName: category.name,
+      });
+    }
+  });
+  
+  return choices;
+}
+
+/**
+ * Tree-style agent selection with expand/collapse via arrow keys
+ */
+async function selectAgentsWithTree() {
+  console.log(chalk.cyan('\nAgent Selection - Tree View'));
+  console.log(chalk.gray('Navigation: ↑↓ arrows, → to expand, ← to collapse'));
+  console.log(chalk.gray('Actions: Space to toggle agent, Enter to confirm\n'));
+  
+  const selectedAgents = new Set();
+  const expandedCategories = new Set();
+  let lastToggledCategory = null;  // Track which category was expanded/collapsed
+  let lastToggledAgent = null;  // Track which agent was toggled with space bar
+  let cancelled = false;  // Track if user cancelled with Ctrl+C
+  
+  // Pre-select default agents
+  AGENT_TREE[0].agents.forEach(agent => {
+    if (agent.enabled) {
+      selectedAgents.add(agent.value);
+    }
+  });
+  
+  let done = false;
+  
+  while (!done) {
+    const initialChoices = buildTreeChoices(expandedCategories, selectedAgents);
+    
+    // Add completion option
+    initialChoices.push(new inquirer.Separator());
+    const agentCount = selectedAgents.size;
+    initialChoices.push({
+      name: chalk.green(`✓ Continue with ${agentCount} selected agent${agentCount !== 1 ? 's' : ''}`),
+      value: 'done',
+      isDone: true,
+    });
+    
+    // Find position after actions (agent toggle, category expand/collapse)
+    let initialIndex = 0;
+    
+    if (lastToggledAgent) {
+      // Find the toggled agent in the rebuilt list
+      const newIndex = initialChoices.findIndex(c => c.value === `toggle:${lastToggledAgent}`);
+      if (newIndex >= 0) {
+        initialIndex = newIndex;
+      }
+      lastToggledAgent = null;
+    } else if (lastToggledCategory) {
+      // Find the category (could be expand or collapse now)
+      const categoryName = lastToggledCategory;
+      let newIndex = initialChoices.findIndex(c => 
+        (c.value === `expand:${categoryName}` || c.value === `collapse:${categoryName}`)
+      );
+      if (newIndex >= 0) {
+        initialIndex = newIndex;
+      }
+      lastToggledCategory = null;
+    }
+    
+    // Use Enquirer Select for better keypress control
+    let action = null;
+    
+    try {
+      const prompt = new Select({
+        name: 'action',
+        message: `Selected: ${agentCount} agent${agentCount !== 1 ? 's' : ''}`,
+        choices: initialChoices,
+        pageSize: 20,
+        loop: false,
+        pointer: '❯',
+        initial: initialIndex,  // Start at the toggled agent position if space bar was used
+      });
+      
+      // Add custom keypress handler for arrow keys, space bar, and Enter
+      prompt.on('keypress', async (str, key) => {
+        // Force confirmation on Enter key - highest priority
+        if (key && (key.name === 'return' || key.name === 'enter')) {
+          const current = initialChoices[prompt.index];
+          if (current && current.value === 'done') {
+            // Force immediate exit
+            action = 'done';
+            done = true;
+            try {
+              prompt.close();
+            } catch (e) {
+              // Ignore close errors
+            }
+            return;
+          }
+        }
+        
+        if (key && key.name === 'right') {
+          // Arrow right - expand current category if it's collapsed
+          const current = initialChoices[prompt.index];
+          if (current && current.isCategory && current.value.startsWith('expand:')) {
+            const categoryName = current.categoryName;
+            expandedCategories.add(categoryName);
+            lastToggledCategory = categoryName;
+            // Signal to rebuild by returning early
+            prompt.submit();
+            action = 'rebuild';
+          }
+        } else if (key && key.name === 'left') {
+          // Arrow left - collapse current category if it's expanded
+          const current = initialChoices[prompt.index];
+          if (current && current.isCategory && current.value.startsWith('collapse:')) {
+            const categoryName = current.categoryName;
+            expandedCategories.delete(categoryName);
+            lastToggledCategory = categoryName;
+            // Signal to rebuild by returning early
+            prompt.submit();
+            action = 'rebuild';
+          }
+        } else if (str === ' ' || (key && key.name === 'space')) {
+          // Space bar - toggle current agent selection with rebuild
+          const current = initialChoices[prompt.index];
+          if (current && current.isAgent && current.value.startsWith('toggle:')) {
+            const agentId = current.value.replace('toggle:', '');
+            if (selectedAgents.has(agentId)) {
+              selectedAgents.delete(agentId);
+            } else {
+              selectedAgents.add(agentId);
+            }
+            // Track which agent we toggled so we can reposition after rebuild
+            lastToggledAgent = agentId;
+            
+            // Rebuild choices with updated selection state (will clear and redraw in place)
+            prompt.submit();
+            action = 'rebuild-space';
+            return;
+          }
+        }
+      });
+      
+      // Get the result
+      if (action !== 'rebuild' && action !== 'rebuild-space') {
+        try {
+          action = await prompt.run();
+        } catch (promptError) {
+          // Handle Ctrl+C or cancellation
+          if (promptError.message === 'prompt was cancelled' || promptError.code === 'ERR_USE_AFTER_CLOSE') {
+            cancelled = true;
+            done = true;
+            break;
+          }
+          throw promptError;
+        }
+      }
+    } catch (error) {
+      // Handle cancellation gracefully
+      if (error.message === 'prompt was cancelled' || error.code === 'ERR_USE_AFTER_CLOSE') {
+        cancelled = true;
+        done = true;
+        break;
+      }
+      
+      // Fallback to inquirer if Enquirer Select fails
+      try {
+        const { action: inquirerAction } = await inquirer.prompt([
+          {
+            type: 'list',
+            name: 'action',
+            message: `Selected: ${agentCount} agent${agentCount !== 1 ? 's' : ''}`,
+            choices: initialChoices,
+            pageSize: 20,
+            loop: false,
+          }
+        ]);
+        action = inquirerAction;
+      } catch (inquirerError) {
+        // User cancelled with Ctrl+C
+        cancelled = true;
+        done = true;
+        break;
+      }
+    }
+    
+    // Handle the action
+    if (action === 'done') {
+      done = true;
+      break;  // Immediately exit the loop
+    } else if (action === 'rebuild' || action === 'rebuild-space') {
+      // Loop again with rebuilt choices (will clear and redraw in place)
+      continue;
+    } else if (action && action.startsWith('expand:')) {
+      const categoryName = action.replace('expand:', '');
+      expandedCategories.add(categoryName);
+    } else if (action && action.startsWith('collapse:')) {
+      const categoryName = action.replace('collapse:', '');
+      expandedCategories.delete(categoryName);
+    } else if (action && action.startsWith('toggle:')) {
+      const agentId = action.replace('toggle:', '');
+      if (selectedAgents.has(agentId)) {
+        selectedAgents.delete(agentId);
+      } else {
+        selectedAgents.add(agentId);
+      }
+    }
+  }
+  
+  const result = Array.from(selectedAgents);
+  
+  // If user cancelled, return empty array to signal cancellation
+  if (cancelled) {
+    console.log(chalk.yellow('\n✓ Selection cancelled'));
+    return [];
+  }
+  
+  if (result.length === 0) {
+    console.log(chalk.yellow('\nNo agents selected. Using default core development agents.'));
+    return ['planner', 'coder', 'researcher', 'tester'];
+  }
+  
+  console.log(chalk.green(`\n✓ Selected ${result.length} agent${result.length !== 1 ? 's' : ''}\n`));
+  return result;
+}
+
+/**
  * Spawn swarm wizard
  */
 async function spawnSwarmWizard() {
@@ -364,21 +962,7 @@ async function spawnSwarmWizard() {
       default: 8,
       validate: (input) => (input > 0 && input <= 20) || 'Please enter a number between 1 and 20',
     },
-    {
-      type: 'checkbox',
-      name: 'workerTypes',
-      message: 'Select worker agent types:',
-      choices: [
-        { name: 'Researcher', value: 'researcher', checked: true },
-        { name: 'Coder', value: 'coder', checked: true },
-        { name: 'Analyst', value: 'analyst', checked: true },
-        { name: 'Tester', value: 'tester', checked: true },
-        { name: 'Architect', value: 'architect' },
-        { name: 'Reviewer', value: 'reviewer' },
-        { name: 'Optimizer', value: 'optimizer' },
-        { name: 'Documenter', value: 'documenter' },
-      ],
-    },
+
     {
       type: 'list',
       name: 'consensusAlgorithm',
@@ -410,6 +994,14 @@ async function spawnSwarmWizard() {
     },
   ]);
 
+  // Use tree-style agent selection
+  const selectedAgents = await selectAgentsWithTree();
+  
+  // Check if user cancelled the selection (empty array with no defaults returned)
+  if (!selectedAgents || selectedAgents.length === 0) {
+    return;
+  }
+
   // Spawn the swarm with collected parameters
   const swarmResult = await spawnSwarm([answers.objective], {
     name: answers.name,
@@ -417,7 +1009,7 @@ async function spawnSwarmWizard() {
     'queen-type': answers.queenType,
     maxWorkers: answers.maxWorkers,
     'max-workers': answers.maxWorkers,
-    workerTypes: answers.workerTypes.join(','),
+    workerTypes: selectedAgents.join(','),
     consensus: answers.consensusAlgorithm,
     autoScale: answers.autoScale,
     'auto-scale': answers.autoScale,
@@ -430,7 +1022,7 @@ async function spawnSwarmWizard() {
   // If Claude Code spawning was requested, launch it using the same function as --claude flag
   if (answers.spawnClaude && swarmResult && swarmResult.swarmId) {
     // Create workers array in the same format expected by spawnClaudeCodeInstances
-    const workers = answers.workerTypes.map((type, index) => ({
+    const workers = selectedAgents.map((type, index) => ({
       id: `worker-${index + 1}`,
       type,
       role: 'worker',
@@ -944,14 +1536,115 @@ async function spawnSwarm(args, flags) {
  */
 function getAgentCapabilities(type) {
   const capabilities = {
+    // Core Development
+    planner: ['task-decomposition', 'dependency-analysis', 'resource-allocation', 'timeline-estimation'],
     researcher: ['web-search', 'data-gathering', 'analysis', 'synthesis'],
     coder: ['code-generation', 'implementation', 'refactoring', 'debugging'],
-    analyst: ['data-analysis', 'pattern-recognition', 'reporting', 'visualization'],
     tester: ['test-generation', 'quality-assurance', 'bug-detection', 'validation'],
-    architect: ['system-design', 'architecture', 'planning', 'documentation'],
     reviewer: ['code-review', 'quality-check', 'feedback', 'improvement'],
-    optimizer: ['performance-tuning', 'optimization', 'profiling', 'enhancement'],
-    documenter: ['documentation', 'explanation', 'tutorial-creation', 'knowledge-base'],
+    
+    // Analysis & Architecture
+    'code-analyzer': ['code-analysis', 'quality-check', 'pattern-recognition', 'metrics'],
+    'analyze-code-quality': ['deep-code-analysis', 'quality-metrics', 'technical-debt', 'complexity-analysis'],
+    'system-architect': ['system-design', 'architecture', 'planning', 'documentation'],
+    'arch-system-design': ['detailed-architecture', 'component-design', 'interface-definition', 'system-modeling'],
+    'repo-architect': ['repository-structure', 'code-organization', 'build-configuration', 'dependency-management'],
+    'perf-analyzer': ['performance-tuning', 'optimization', 'profiling', 'enhancement'],
+    
+    // Specialized Development
+    'backend-dev': ['api-design', 'rest-endpoints', 'graphql', 'database-integration'],
+    'ml-developer': ['model-training', 'data-preprocessing', 'ml-pipeline', 'model-optimization'],
+    'mobile-dev': ['mobile-ui', 'native-apis', 'cross-platform', 'app-deployment'],
+    'data-ml-model': ['ml-modeling', 'feature-engineering', 'model-evaluation', 'hyperparameter-tuning'],
+    
+    // Coordination & Orchestration
+    'task-orchestrator': ['multi-agent-coordination', 'task-routing', 'load-balancing', 'progress-tracking'],
+    'adaptive-coordinator': ['adaptive-strategies', 'dynamic-coordination', 'learning-coordination', 'context-adaptation'],
+    'hierarchical-coordinator': ['hierarchical-coordination', 'team-management', 'delegation', 'escalation'],
+    'mesh-coordinator': ['distributed-coordination', 'peer-to-peer', 'consensus', 'fault-tolerance'],
+    'queen-coordinator': ['centralized-coordination', 'strategic-planning', 'resource-management', 'priority-setting'],
+    'sparc-coord': ['sparc-methodology', 'workflow-coordination', 'phase-management', 'quality-gates'],
+    'sync-coordinator': ['synchronization', 'state-management', 'consistency', 'timing-coordination'],
+    'collective-intelligence-coordinator': ['collective-intelligence', 'knowledge-aggregation', 'consensus-building', 'emergent-behavior'],
+    'memory-coordinator': ['memory-management', 'knowledge-sharing', 'context-preservation', 'history-tracking'],
+    'swarm-init': ['swarm-initialization', 'topology-setup', 'agent-bootstrapping', 'configuration'],
+    'smart-agent': ['intelligent-automation', 'adaptive-behavior', 'learning', 'decision-making'],
+    
+    // Consensus & Synchronization
+    'byzantine-coordinator': ['byzantine-fault-tolerance', 'adversarial-resilience', 'consensus', 'verification'],
+    'crdt-synchronizer': ['crdt-operations', 'eventual-consistency', 'conflict-resolution', 'distributed-state'],
+    'gossip-coordinator': ['gossip-protocol', 'epidemic-distribution', 'rumor-spreading', 'network-resilience'],
+    'quorum-manager': ['quorum-management', 'voting', 'threshold-decisions', 'availability'],
+    'raft-manager': ['raft-consensus', 'leader-election', 'log-replication', 'distributed-consensus'],
+    'security-manager': ['security', 'access-control', 'authentication', 'encryption'],
+    'consensus-builder': ['consensus-building', 'agreement-protocols', 'decision-making', 'conflict-resolution'],
+    
+    // Performance & Monitoring
+    'performance-benchmarker': ['benchmarking', 'performance-testing', 'metrics-collection', 'comparison'],
+    'performance-monitor': ['real-time-monitoring', 'alerting', 'metrics-tracking', 'health-checks'],
+    'resource-allocator': ['resource-allocation', 'capacity-planning', 'optimization', 'scheduling'],
+    'topology-optimizer': ['topology-optimization', 'network-design', 'communication-patterns', 'efficiency'],
+    'load-balancer': ['load-balancing', 'traffic-distribution', 'failover', 'scaling'],
+    'benchmark-suite': ['benchmark-execution', 'performance-analysis', 'regression-testing', 'reporting'],
+    
+    // GitHub Integration
+    'github-modes': ['github-operations', 'repository-management', 'workflow-automation', 'api-integration'],
+    'pr-manager': ['pull-request-management', 'code-review-coordination', 'merge-strategies', 'conflict-resolution'],
+    'issue-tracker': ['issue-management', 'bug-tracking', 'feature-requests', 'prioritization'],
+    'project-board-sync': ['project-management', 'board-sync', 'status-tracking', 'workflow-management'],
+    'release-manager': ['release-management', 'version-control', 'changelog-generation', 'deployment-coordination'],
+    'release-swarm': ['release-orchestration', 'multi-repo-releases', 'dependency-management', 'rollout-strategy'],
+    'code-review-swarm': ['collaborative-review', 'automated-checks', 'quality-gates', 'feedback-aggregation'],
+    'multi-repo-swarm': ['multi-repository-operations', 'cross-repo-coordination', 'dependency-tracking', 'synchronization'],
+    'swarm-pr': ['pr-swarm-operations', 'parallel-reviews', 'automated-testing', 'merge-orchestration'],
+    'swarm-issue': ['issue-swarm-operations', 'triage', 'assignment', 'tracking'],
+    'workflow-automation': ['workflow-automation', 'ci-cd', 'pipeline-management', 'event-handling'],
+    
+    // DevOps & CI/CD
+    'cicd-engineer': ['pipeline-automation', 'deployment', 'testing-automation', 'infrastructure'],
+    'ops-cicd-github': ['github-ci-cd', 'actions-automation', 'deployment-pipelines', 'integration-testing'],
+    'production-validator': ['production-validation', 'smoke-testing', 'monitoring', 'rollback'],
+    'migration-planner': ['migration-planning', 'risk-assessment', 'rollout-strategy', 'data-migration'],
+    
+    // Documentation
+    'api-docs': ['documentation', 'explanation', 'tutorial-creation', 'knowledge-base'],
+    'docs-api-openapi': ['openapi-documentation', 'api-specification', 'schema-generation', 'interactive-docs'],
+    
+    // SPARC Methodology
+    'sparc-coder': ['sparc-implementation', 'tdd', 'refactoring', 'iterative-development'],
+    'implementer-sparc-coder': ['sparc-coding', 'specification-driven', 'test-first', 'quality-focused'],
+    'specification': ['specification-writing', 'requirements-analysis', 'documentation', 'validation'],
+    'pseudocode': ['pseudocode-generation', 'algorithm-design', 'logic-planning', 'abstraction'],
+    'refinement': ['code-refinement', 'optimization', 'cleanup', 'best-practices'],
+    
+    // Goal Planning
+    'goal-planner': ['goal-planning', 'objective-setting', 'milestone-definition', 'success-criteria'],
+    'code-goal-planner': ['code-goal-planning', 'feature-planning', 'technical-roadmap', 'implementation-strategy'],
+    'sublinear-goal-planner': ['sublinear-planning', 'efficiency-optimization', 'resource-minimization', 'smart-prioritization'],
+    
+    // Swarm Management
+    'swarm-memory-manager': ['swarm-memory', 'knowledge-management', 'context-sharing', 'history'],
+    'scout-explorer': ['exploration', 'discovery', 'reconnaissance', 'information-gathering'],
+    'worker-specialist': ['specialized-work', 'domain-expertise', 'focused-execution', 'skill-mastery'],
+    'tdd-london-swarm': ['tdd-london-style', 'mockist-tdd', 'interaction-testing', 'design-driven'],
+    
+    // Neural & AI
+    'safla-neural': ['neural-operations', 'learning', 'adaptation', 'pattern-recognition'],
+    'flow-nexus-neural': ['neural-networks', 'ai-operations', 'model-management', 'inference'],
+    
+    // Flow-Nexus Platform
+    'flow-nexus-app-store': ['app-management', 'marketplace', 'publishing', 'discovery'],
+    'flow-nexus-auth': ['authentication', 'authorization', 'identity-management', 'security'],
+    'flow-nexus-challenges': ['challenges', 'gamification', 'competitions', 'rewards'],
+    'flow-nexus-payments': ['payments', 'billing', 'transactions', 'monetization'],
+    'flow-nexus-sandbox': ['sandbox-environment', 'isolation', 'testing', 'experimentation'],
+    'flow-nexus-swarm': ['swarm-operations', 'distributed-execution', 'coordination', 'management'],
+    'flow-nexus-user-tools': ['user-tools', 'utilities', 'helpers', 'integrations'],
+    'flow-nexus-workflow': ['workflow-management', 'process-automation', 'orchestration', 'integration'],
+    
+    // Templates & Utilities
+    'base-template-generator': ['template-generation', 'boilerplate', 'scaffolding', 'project-structure'],
+    'spec-mobile-react-native': ['react-native-specs', 'mobile-architecture', 'component-planning', 'native-bridge'],
   };
 
   return capabilities[type] || ['general'];

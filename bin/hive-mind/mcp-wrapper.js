@@ -728,10 +728,10 @@ https://github.com/ruvnet/claude-code-flow/docs/windows-installation.md
   _groupAgentTypes(types) {
     // Group complementary agent types that work well together
     const groups = {
-      development: ['coder', 'architect', 'reviewer'],
-      analysis: ['researcher', 'analyst', 'optimizer'],
-      quality: ['tester', 'documenter'],
-      coordination: ['coordinator'],
+      development: ['coder', 'system-architect', 'reviewer'],
+      analysis: ['researcher', 'analyst', 'perf-analyzer'],
+      quality: ['tester', 'api-docs'],
+      coordination: ['task-orchestrator'],
     };
 
     const result = [];

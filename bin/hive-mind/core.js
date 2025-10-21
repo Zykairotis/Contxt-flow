@@ -456,11 +456,11 @@ export class HiveMindCore extends EventEmitter {
         weight: 1.3,
       },
       reviewer: { keywords: ['review', 'feedback', 'improve', 'refactor', 'audit'], weight: 1.0 },
-      optimizer: {
+      'perf-analyzer': {
         keywords: ['optimize', 'performance', 'speed', 'efficiency', 'enhance'],
         weight: 1.4,
       },
-      documenter: { keywords: ['document', 'explain', 'write', 'describe', 'manual'], weight: 0.9 },
+      'api-docs': { keywords: ['document', 'explain', 'write', 'describe', 'manual'], weight: 0.9 },
     };
 
     // Calculate scores for each worker
@@ -542,10 +542,10 @@ export class HiveMindCore extends EventEmitter {
       coder: ['code', 'implement', 'build', 'develop', 'fix', 'create'],
       analyst: ['analyze', 'data', 'metrics', 'performance', 'report'],
       tester: ['test', 'validate', 'check', 'verify', 'quality'],
-      architect: ['design', 'architecture', 'structure', 'plan'],
+      'system-architect': ['design', 'architecture', 'structure', 'plan'],
       reviewer: ['review', 'feedback', 'improve', 'refactor'],
-      optimizer: ['optimize', 'performance', 'speed', 'efficiency'],
-      documenter: ['document', 'explain', 'write', 'describe'],
+      'perf-analyzer': ['optimize', 'performance', 'speed', 'efficiency'],
+      'api-docs': ['document', 'explain', 'write', 'describe'],
     };
 
     let bestWorker = null;

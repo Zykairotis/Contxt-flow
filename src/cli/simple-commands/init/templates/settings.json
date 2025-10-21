@@ -1,39 +1,45 @@
 {
   "env": {
-    "CLAUDE_FLOW_AUTO_COMMIT": "false",
-    "CLAUDE_FLOW_AUTO_PUSH": "false",
-    "CLAUDE_FLOW_HOOKS_ENABLED": "true",
-    "CLAUDE_FLOW_TELEMETRY_ENABLED": "true",
-    "CLAUDE_FLOW_REMOTE_EXECUTION": "true",
-    "CLAUDE_FLOW_CHECKPOINTS_ENABLED": "true"
+    "API_TIMEOUT_MS": "3000000",
+    "PATH": "/home/mewtwo/.nexus/bin:/home/mewtwo/.local/bin:/home/mewtwo/.npm-global/bin:/home/mewtwo/.npm-global/bin:/home/mewtwo/.bun/bin:/opt/miniconda3/condabin:/home/mewtwo/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/bin:/opt/cuda/bin:/opt/cuda/nsight_compute:/opt/cuda/nsight_systems/bin:/var/lib/flatpak/exports/bin:/usr/lib/jvm/default/bin:/usr/bin/site_perl:/usr/bin/vendor_perl:/usr/bin/core_perl:/home/mewtwo/.local/bin:/home/mewtwo/.local/bin"
   },
+  "includeCoAuthoredBy": true,
   "permissions": {
     "allow": [
-      "Bash(npx claude-flow:*)",
+      "Bash(npx claude-flow :*)",
       "Bash(npm run lint)",
       "Bash(npm run test:*)",
-      "Bash(npm test:*)",
+      "Bash(npm test :*)",
       "Bash(git status)",
-      "Bash(git diff:*)",
-      "Bash(git log:*)",
-      "Bash(git add:*)",
-      "Bash(git commit:*)",
+      "Bash(git diff :*)",
+      "Bash(git log :*)",
+      "Bash(git add :*)",
+      "Bash(git commit :*)",
       "Bash(git push)",
-      "Bash(git config:*)",
-      "Bash(git tag:*)",
-      "Bash(git branch:*)",
-      "Bash(git checkout:*)",
-      "Bash(git stash:*)",
-      "Bash(jq:*)",
-      "Bash(node:*)",
-      "Bash(which:*)",
+      "Bash(git config :*)",
+      "Bash(git tag :*)",
+      "Bash(git branch :*)",
+      "Bash(git checkout :*)",
+      "Bash(git stash :*)",
+      "Bash(jq :*)",
+      "Bash(node :*)",
+      "Bash(which :*)",
       "Bash(pwd)",
-      "Bash(ls:*)"
+      "Bash(ls :*)",
+      "Bash(flock :*)"
     ],
     "deny": [
-      "Bash(rm -rf /)"
+      "Bash(rm -rf /)",
+      "Bash(sudo :*)",
+      "Bash(curl | bash:*)",
+      "Bash(wget | sh:*)",
+      "Bash(eval :*)"
     ]
   },
+  "enabledMcpjsonServers": [
+    "claude-flow",
+    "ruv-swarm"
+  ],
   "hooks": {
     "PreToolUse": [
       {
@@ -41,7 +47,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cat | jq -r '.tool_input.command // empty' | tr '\\n' '\\0' | xargs -0 -I {} npx claude-flow@alpha hooks pre-command --command '{}' --validate-safety true --prepare-resources true"
+            "command": "jq -r '.tool_input.command // empty' | tr '\\n' '\\0' | xargs -0 -I {} claude-flow hooks pre-command --command '{}' --validate-safety true --prepare-resources true"
           }
         ]
       },
@@ -50,7 +56,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cat | jq -r '.tool_input.file_path // .tool_input.path // empty' | tr '\\n' '\\0' | xargs -0 -I {} npx claude-flow@alpha hooks pre-edit --file '{}' --auto-assign-agents true --load-context true"
+            "command": "jq -r '.tool_input.file_path // .tool_input.path // empty' | tr '\\n' '\\0' | xargs -0 -I {} claude-flow hooks pre-edit --file '{}' --auto-assign-agents true --load-context true"
           }
         ]
       }
@@ -61,7 +67,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cat | jq -r '.tool_input.command // empty' | tr '\\n' '\\0' | xargs -0 -I {} npx claude-flow@alpha hooks post-command --command '{}' --track-metrics true --store-results true"
+            "command": "jq -r '.tool_input.command // empty' | tr '\\n' '\\0' | xargs -0 -I {} sh -c 'flock -n /tmp/claude-flow-post.lock claude-flow hooks post-command --command \"{}\" --track-metrics true --store-results true &'"
           }
         ]
       },
@@ -70,7 +76,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cat | jq -r '.tool_input.file_path // .tool_input.path // empty' | tr '\\n' '\\0' | xargs -0 -I {} npx claude-flow@alpha hooks post-edit --file '{}' --format true --update-memory true"
+            "command": "jq -r '.tool_input.file_path // .tool_input.path // empty' | tr '\\n' '\\0' | xargs -0 -I {} claude-flow hooks post-edit --file '{}' --format true --update-memory true"
           }
         ]
       }
@@ -81,7 +87,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/bin/bash -c 'INPUT=$(cat); CUSTOM=$(echo \"$INPUT\" | jq -r \".custom_instructions // \\\"\\\"\"); echo \"🔄 PreCompact Guidance:\"; echo \"📋 IMPORTANT: Review CLAUDE.md in project root for:\"; echo \"   • 54 available agents and concurrent usage patterns\"; echo \"   • Swarm coordination strategies (hierarchical, mesh, adaptive)\"; echo \"   • SPARC methodology workflows with batchtools optimization\"; echo \"   • Critical concurrent execution rules (GOLDEN RULE: 1 MESSAGE = ALL OPERATIONS)\"; if [ -n \"$CUSTOM\" ]; then echo \"🎯 Custom compact instructions: $CUSTOM\"; fi; echo \"✅ Ready for compact operation\"'"
+            "command": "echo '📄 PreCompact: Review CLAUDE.md for 54 agents, swarm coordination, SPARC methodology, GOLDEN RULE (1 msg = all ops)'"
           }
         ]
       },
@@ -90,7 +96,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/bin/bash -c 'echo \"🔄 Auto-Compact Guidance (Context Window Full):\"; echo \"📋 CRITICAL: Before compacting, ensure you understand:\"; echo \"   • All 54 agents available in .claude/agents/ directory\"; echo \"   • Concurrent execution patterns from CLAUDE.md\"; echo \"   • Batchtools optimization for 300% performance gains\"; echo \"   • Swarm coordination strategies for complex tasks\"; echo \"⚡ Apply GOLDEN RULE: Always batch operations in single messages\"; echo \"✅ Auto-compact proceeding with full agent context\"'"
+            "command": "echo '📄 Auto-Compact (Context Full): 54 agents, concurrent patterns, batchtools, swarm coordination, GOLDEN RULE'"
           }
         ]
       }
@@ -100,16 +106,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx claude-flow@alpha hooks session-end --generate-summary true --persist-state true --export-metrics true"
+            "command": "sh -c 'flock -n /tmp/claude-flow-stop.lock claude-flow hooks session-end --generate-summary true --persist-state true --export-metrics true &'"
           }
         ]
       }
     ]
   },
-  "includeCoAuthoredBy": true,
-  "enabledMcpjsonServers": ["claude-flow", "ruv-swarm"],
-  "statusLine": {
-    "type": "command",
-    "command": ".claude/statusline-command.sh"
-  }
+  "alwaysThinkingEnabled": false
 }

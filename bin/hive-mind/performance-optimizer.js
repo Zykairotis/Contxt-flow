@@ -428,9 +428,9 @@ export class PerformanceOptimizer extends EventEmitter {
    */
   _groupAgentsByComplexity(agentTypes) {
     const complexity = {
-      low: ['coordinator'],
-      medium: ['coder', 'tester', 'documenter'],
-      high: ['researcher', 'analyst', 'architect', 'optimizer', 'reviewer'],
+      low: ['task-orchestrator'],
+      medium: ['coder', 'tester', 'api-docs'],
+      high: ['researcher', 'analyst', 'system-architect', 'perf-analyzer', 'reviewer'],
     };
 
     const groups = [];
